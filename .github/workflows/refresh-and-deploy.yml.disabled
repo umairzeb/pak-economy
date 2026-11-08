@@ -1,0 +1,132 @@
+# PREPARED, NOT ACTIVE. Rename this file to refresh-and-deploy.yml after the owner decides to publish.
+# Refreshes the data after each day's SBP and PBS releases and after State Bank decisions (see pipeline/release_days.py), commits any changes, and publishes the site
+# to GitHub Pages. Also redeploys on every push to main, and can be run by hand
+# from the Actions tab ("Run workflow").
+name: Refresh data and deploy
+
+on:
+  schedule:
+    # Wake-ups in UTC (Pakistan is UTC+5 all year, no daylight saving). pipeline/release_days.py
+    # decides whether anything is due and most runs stop within seconds. GitHub starts scheduled
+    # runs late and sometimes drops them, so there are several short wake-ups each evening.
+    - cron: "42 13,14 * * *" # 6:42pm and 7:42pm in Pakistan: after the day's SBP and PBS releases
+    - cron: "42 16 * * *" # 9:42pm in Pakistan: a second try after a Monetary Policy Committee day
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      check_only:
+        description: "Only test the data sources (no commit, no deploy). Runs the code on the chosen branch."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: refresh-and-deploy
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      due: ${{ steps.schedule.outputs.due || (github.event_name != 'push' && 'true') || 'false' }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'schedule'
+      - name: Is a refresh due?
+        id: schedule
+        if: github.event_name == 'schedule'
+        run: python3 -m pipeline.release_days
+
+  refresh:
+    needs: gate
+    # A push already carries its own data; only due scheduled runs and manual runs fetch new data.
+    if: needs.gate.outputs.due == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      pipeline: ${{ steps.pipeline.outcome }}
+      health: ${{ steps.health.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.check_only && github.ref_name || 'main' }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Fetch latest official data
+        id: pipeline
+        # A failed source keeps its previous file, so publish whatever did update.
+        continue-on-error: true
+        run: python -m pipeline.build
+      - name: Test the safeguards
+        run: python -m tests.test_guards
+      - name: Check the data
+        id: health
+        # 0 all good, 1 data looks wrong (don't publish it), 2 needs a look but is safe to publish.
+        run: |
+          set +e
+          python -m tests.health_check
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+      - name: Commit updated data
+        if: ${{ !inputs.check_only }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Data that looks wrong is held back. The attempt is still recorded so the
+          # schedule doesn't retry (and email) every half hour.
+          if [ "${{ steps.health.outputs.code }}" = "1" ]; then
+            git checkout -- public/data
+            git clean -fdq public/data
+          fi
+          date -u +%FT%TZ > pipeline/last_attempt.txt
+          git add public/data pipeline/last_attempt.txt
+          if git diff --cached --quiet; then
+            echo "No new data today."
+          else
+            git commit -m "Refresh data $(date -u +%F)"
+            git push
+          fi
+
+  deploy:
+    needs: [gate, refresh]
+    if: ${{ !cancelled() && !inputs.check_only && (github.event_name == 'push' || needs.refresh.result == 'success') }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build site
+        run: npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+      - id: deploy
+        uses: actions/deploy-pages@v5
+
+  # Fails (and GitHub emails you) when data is wrong, overdue, or a source has been down for
+  # over two weeks. Wrong data is held back; the site keeps its last good data.
+  report:
+    needs: [refresh, deploy]
+    if: ${{ !cancelled() && (needs.refresh.outputs.pipeline == 'failure' || (needs.refresh.outputs.health != '' && needs.refresh.outputs.health != '0')) }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::The data needs a look. See the 'Fetch latest official data' and 'Check the data' steps in the refresh job."
+          exit 1

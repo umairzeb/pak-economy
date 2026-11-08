@@ -1,0 +1,12 @@
+.venv/
+.cache/
+.scratch/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.DS_Store
+*.tsbuildinfo
+
+# Private working instructions, not for the public repository
+CLAUDE.md
