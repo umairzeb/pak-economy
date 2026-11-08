@@ -4,7 +4,7 @@ A plain-English dashboard of Pakistan's economy: how the country makes and spend
 
 ## Status
 
-Approved for publishing at https://umairzeb.github.io/pak-economy/. The data on the site does not update by itself yet: the daily refresh is prepared but off (see `docs/REPORT.md`).
+Live at https://umairzeb.github.io/pak-economy/. The data on the site does not update by itself yet: the daily refresh is prepared but off (see `docs/REPORT.md`).
 
 ## Run it on this computer
 

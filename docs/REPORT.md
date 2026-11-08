@@ -1,6 +1,6 @@
 # Report: Pakistan economy dashboard
 
-Finished 8 November 2026. Approved for publishing by the owner, at https://umairzeb.github.io/pak-economy/. The data is from 8 November 2026 and does not update by itself until the refresh is turned on.
+Finished 8 November 2026. Published on the owner's instruction on 8 November 2026, at https://umairzeb.github.io/pak-economy/. The published data is from 8 November 2026 and does not update by itself until the refresh is turned on.
 
 ## What's wrong or unfinished first
 
@@ -88,11 +88,12 @@ PDF-parsed figures (not hand-entered, but read automatically from PDFs): SBP pol
 - Browser audit (`tests/browser_audit.js`) at phone (375px), tablet (768px) and desktop widths, in light and dark themes, on all four ranges: 0 problems, with chart labels counted above zero (over 2,000 per run). It does fail when the browser hasn't drawn charts: I saw that happen once and re-ran after a screenshot, as the instructions warned.
 - **An honest limit:** on the final desktop light run a screenshot timed out, so drawing was confirmed by counting labels (2,442) rather than a screenshot.
 - During testing I read the page itself and found a real bug the automatic checks missed: gross public debt showed 8.3% of GDP instead of 68.3%, because the PDF splits digits. Fixed, and a new check compares the percentage against debt divided by GDP.
-- Not tested: running from GitHub's servers; a real unattended daily refresh.
+- Live site, after publishing on 8 Nov 2026: GitHub's deploy step succeeded, all 71 data files loaded, no console errors, and the same browser audit found 0 problems on all four ranges at phone (2,127 chart labels), tablet (2,407) and desktop (2,442) widths. The live run was in dark theme only; both themes were tested on the local copy of the same build.
+- Not tested: fetching fresh data from GitHub's servers; a real unattended daily refresh.
 
 ## Decisions for you
 
-1. **Publishing: approved by the owner**, on GitHub Pages as a public repository like the Australian site. `CLAUDE.md` is kept out of the repository because it describes the owner personally.
+1. **Published** on the owner's instruction, on GitHub Pages as a public repository like the Australian site. `CLAUDE.md` is kept out of the repository because it describes the owner personally.
 2. **Reuse permission.** PBS has an open licence. SBP and the Finance Ministry have no stated reuse terms: no permission, no prohibition. You might ask them, especially if this goes beyond friends.
 3. **The stock market.** Ask PSX for written permission if you want KSE-100 added. I left it out to respect their terms.
 4. **Turning on the daily refresh** (rename the workflow file). It needs watching for its first few runs.
