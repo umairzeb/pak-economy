@@ -76,7 +76,7 @@ export interface Manifest {
   errors: { id: string; error: string }[];
   warnings: string[];
   stale?: { file: string }[];
-  blocked?: { id: string; publisher: string; files: number }[];
+  blocked?: { id: string; publisher: string; files: number; last_checked?: string | null }[];
   hand_entered?: Record<string, { next_due: string }>;
 }
 

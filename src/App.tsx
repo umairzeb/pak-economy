@@ -49,6 +49,8 @@ export default function App() {
   const missing = data ? [...SERIES.filter((id) => !data.series[id]), ...BUNDLES.filter((id) => !data.bundles[id])] : [];
   const problems = data ? (data.manifest.errors?.length ?? 0) + (data.manifest.stale?.length ?? 0) + (data.manifest.warnings?.length ?? 0) : 0;
   const blocked = (data?.manifest.blocked?.length ?? 0) > 0;
+  const blockedCheck = data?.manifest.blocked?.[0]?.last_checked;
+  const blockedOn = blockedCheck ? new Date(blockedCheck).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : null;
 
   return (
     <TokensContext.Provider value={tokens}>
@@ -81,7 +83,7 @@ export default function App() {
                   <p className="notice">On the last check, {problems} {problems === 1 ? "item was" : "items were"} not refreshed, so some charts show earlier data.</p>
                 )}
                 {blocked && (
-                  <p className="notice">The automatic check can't reach the Finance Ministry's website, so its budget figures weren't rechecked. The ministry publishes these once a year, and each chart shows where its data ends.</p>
+                  <p className="notice">The automatic check can't reach the Finance Ministry's website, so its budget figures {blockedOn ? `were last rechecked on ${blockedOn}` : "weren't rechecked"}. The ministry publishes these once a year, and each chart shows where its data ends.</p>
                 )}
                 {missing.length > 0 && (
                   <p className="notice">Some charts aren't showing because their data didn't load. Please refresh the page.</p>

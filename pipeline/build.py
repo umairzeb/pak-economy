@@ -527,6 +527,7 @@ def main() -> int:
     stale, too_stale, waiting = sort_kept_files(kept, {b["publisher"] for b in manifest["blocked"]}, datetime.now(timezone.utc))
     for b in manifest["blocked"]:
         b["files"] = len(waiting)
+        b["last_checked"] = max((kept[rel]["updated"] for rel in waiting if kept[rel].get("updated")), default=None)
 
     manifest["warnings"] = warnings
     manifest["stale"] = stale
