@@ -88,7 +88,7 @@ Pages: https://www.finance.gov.pk/fiscal_main.html, https://www.finance.gov.pk/f
 
 Terms: no stated reuse terms. Copyright notice only. Published government documents, attributed and linked.
 
-Reliability from here: good.
+Reliability from an ordinary connection: good. From GitHub's servers: refused (403, tested 8 Nov 2026), so these figures don't refresh automatically. Not worked around.
 
 | What | Source | Latest seen | Notes |
 |---|---|---|---|

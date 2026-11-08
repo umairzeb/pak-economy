@@ -4,7 +4,7 @@ A plain-English dashboard of Pakistan's economy: how the country makes and spend
 
 ## Status
 
-Live at https://umairzeb.github.io/pak-economy/. The data on the site does not update by itself yet: the daily refresh is prepared but off (see `docs/REPORT.md`).
+Live at https://umairzeb.github.io/pak-economy/. The data refreshes itself each evening, Pakistan time, except the Finance Ministry's yearly figures (see `docs/REPORT.md`).
 
 ## Run it on this computer
 
@@ -45,4 +45,4 @@ python -m tests.health_check --live
 - `src/events.ts`: events marked on charts
 - `docs/data-sources.md`: every source, what it publishes, terms and gaps
 - `docs/REPORT.md`: what's included, left out, verified, and decisions needed
-- `.github/workflows/refresh-and-deploy.yml.disabled`: the daily refresh, prepared but off
+- `.github/workflows/refresh-and-deploy.yml`: the daily refresh and deploy

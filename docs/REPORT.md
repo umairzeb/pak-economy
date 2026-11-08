@@ -1,10 +1,11 @@
 # Report: Pakistan economy dashboard
 
-Finished 8 November 2026. Published on the owner's instruction on 8 November 2026, at https://umairzeb.github.io/pak-economy/. The published data is from 8 November 2026 and does not update by itself until the refresh is turned on.
+Finished 8 November 2026. Published on the owner's instruction on 8 November 2026, at https://umairzeb.github.io/pak-economy/. The data refreshes itself each evening, Pakistan time, except the Finance Ministry's yearly figures (see below).
 
 ## What's wrong or unfinished first
 
-- **Automatic refresh is prepared but switched off.** Refreshing from GitHub's servers is untested, and Pakistani government sites sometimes block cloud addresses. The first run needs watching. The workflow file is `.github/workflows/refresh-and-deploy.yml.disabled`: rename it to `.yml` to turn it on.
+- **Automatic refresh is on, with one gap.** The Finance Ministry's website refuses GitHub's servers (403 error, 8 Nov 2026), though it opens normally from an ordinary connection. I did not try to get around that. So 17 files (budget outturns, revenue and spending mix, Budget 2026-27) don't refresh automatically, and the page says so. These are full-year figures published once a year. The health check flags them as overdue from late August 2027, and they then need a refresh from an ordinary connection. Everything else refreshed from GitHub successfully on 8 Nov 2026.
+- **The timed wake-ups had not fired yet when this was written.** The refresh was proved by starting it by hand. GitHub runs scheduled jobs late and sometimes skips them.
 - **Unemployment and pay are out of date by nature.** The newest official figure is the 2024-25 survey. The dashboard says so.
 - **Some figures are not rechecked automatically after today.** See "What I checked" below.
 - **World Bank long-run inflation chart:** the World Bank's page returned a 504 error when I tested the source link on 8 Nov 2026, in a normal browser too, and again at publishing. The data itself came through their API, but that one source link may not open until the World Bank fixes it.
@@ -89,12 +90,13 @@ PDF-parsed figures (not hand-entered, but read automatically from PDFs): SBP pol
 - **An honest limit:** on the final desktop light run a screenshot timed out, so drawing was confirmed by counting labels (2,442) rather than a screenshot.
 - During testing I read the page itself and found a real bug the automatic checks missed: gross public debt showed 8.3% of GDP instead of 68.3%, because the PDF splits digits. Fixed, and a new check compares the percentage against debt divided by GDP.
 - Live site, after publishing on 8 Nov 2026: GitHub's deploy step succeeded, all 71 data files loaded, no console errors, and the same browser audit found 0 problems on all four ranges at phone (2,127 chart labels), tablet (2,407) and desktop (2,442) widths. The live run was in dark theme only; both themes were tested on the local copy of the same build.
-- Not tested: fetching fresh data from GitHub's servers; a real unattended daily refresh.
+- First real refresh on GitHub, 8 Nov 2026, started by hand: fetched every source except the Finance Ministry, safeguards passed, 501 data checks passed, the result was saved and the site republished. No figure changed, as no new official data had come out that day. The audit on the refreshed live site found 0 problems at phone and tablet-to-desktop width (778px).
+- Not tested: a run started by the timer rather than by hand. The step that decides whether a refresh is due passes its tests and ran without installed packages on this computer.
 
 ## Decisions for you
 
 1. **Published** on the owner's instruction, on GitHub Pages as a public repository like the Australian site. `CLAUDE.md` is kept out of the repository because it describes the owner personally.
 2. **Reuse permission.** PBS has an open licence. SBP and the Finance Ministry have no stated reuse terms: no permission, no prohibition. You might ask them, especially if this goes beyond friends.
 3. **The stock market.** Ask PSX for written permission if you want KSE-100 added. I left it out to respect their terms.
-4. **Turning on the daily refresh** (rename the workflow file). It needs watching for its first few runs.
+4. **Daily refresh: turned on** at the owner's request. GitHub emails the account owner if a run fails or the data needs a look. It's worth glancing at the first few runs.
 5. **SBP EasyData account** (needs your details): it would add long-run seasonally adjusted series, but isn't necessary.
