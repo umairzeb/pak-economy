@@ -48,6 +48,7 @@ export default function App() {
     : null;
   const missing = data ? [...SERIES.filter((id) => !data.series[id]), ...BUNDLES.filter((id) => !data.bundles[id])] : [];
   const problems = data ? (data.manifest.errors?.length ?? 0) + (data.manifest.stale?.length ?? 0) + (data.manifest.warnings?.length ?? 0) : 0;
+  const blocked = (data?.manifest.blocked?.length ?? 0) > 0;
 
   return (
     <TokensContext.Provider value={tokens}>
@@ -75,9 +76,12 @@ export default function App() {
                   <summary>Read the full summary</summary>
                   <p>{buildSummary(data).join(" ")}</p>
                 </details>
-                <div className="meta">Figures last checked against official sources on {updated}. {problems === 0 ? "No problems were recorded on that check." : ""}</div>
+                <div className="meta">Figures last checked against official sources on {updated}. {problems === 0 && !blocked ? "No problems were recorded on that check." : ""}</div>
                 {problems > 0 && (
                   <p className="notice">On the last check, {problems} {problems === 1 ? "item was" : "items were"} not refreshed, so some charts show earlier data.</p>
+                )}
+                {blocked && (
+                  <p className="notice">The automatic check can't reach the Finance Ministry's website, so its budget figures weren't rechecked. The ministry publishes these once a year, and each chart shows where its data ends.</p>
                 )}
                 {missing.length > 0 && (
                   <p className="notice">Some charts aren't showing because their data didn't load. Please refresh the page.</p>

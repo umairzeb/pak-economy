@@ -1,4 +1,3 @@
-# PREPARED, NOT ACTIVE. Rename this file to refresh-and-deploy.yml after the owner decides to publish.
 # Refreshes the data after each day's SBP and PBS releases and after State Bank decisions (see pipeline/release_days.py), commits any changes, and publishes the site
 # to GitHub Pages. Also redeploys on every push to main, and can be run by hand
 # from the Actions tab ("Run workflow").

@@ -8,6 +8,7 @@ needs a person (see end of main).
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -389,12 +390,45 @@ def open_market_bundle() -> dict:
                   sbp_src("Open Market Closing Exchange Rates"))
 
 
+# The Finance Ministry's website refuses GitHub's servers (HTTP 403, first seen 8 Nov 2026), though it
+# opens normally from an ordinary connection. We respect that and don't try to get past it. Its figures
+# are full-year actuals published once a year, so they wait for a refresh from an ordinary connection,
+# and tests.health_check (fy_overall_balance) says when a new year is overdue. Any other source being
+# refused still counts as a failure.
+KNOWN_CLOUD_BLOCKS = {"budget": MOF}
+
+
+def refused_cloud(e: Exception, env=os.environ) -> bool:
+    """True when this is a run on GitHub's servers and the website refused it outright."""
+    response = getattr(e, "response", None)
+    return env.get("GITHUB_ACTIONS") == "true" and response is not None and response.status_code == 403
+
+
+def sort_kept_files(files: dict[str, dict], blocked_publishers: set[str], now: datetime) -> tuple[list, list, list]:
+    """Files not rewritten this run: (stale, too_stale, waiting on a known block)."""
+    stale, too_stale, waiting = [], [], []
+    for rel, data in files.items():
+        if (data.get("source") or {}).get("name") in blocked_publishers:
+            waiting.append(rel)
+            continue
+        updated = data.get("updated")
+        age = (now - datetime.fromisoformat(updated)).days if updated else None
+        stale.append({"file": rel, "updated": updated, "age_days": age})
+        if age is None or age > STALE_DAYS:
+            too_stale.append(rel)
+    return stale, too_stale, waiting
+
+
 def main() -> int:
     t0 = time.time()
     built: dict[str, dict] = {}
-    manifest = {"generated": now_iso(), "series": [], "bundles": [], "errors": []}
+    manifest = {"generated": now_iso(), "series": [], "bundles": [], "errors": [], "blocked": []}
 
     def record_error(what: str, e: Exception):
+        if what in KNOWN_CLOUD_BLOCKS and refused_cloud(e):
+            manifest["blocked"].append({"id": what, "publisher": KNOWN_CLOUD_BLOCKS[what]})
+            print(f"  BLOCKED {what}: {KNOWN_CLOUD_BLOCKS[what]} refused this server; keeping its last good files")
+            return
         manifest["errors"].append({"id": what, "error": f"{type(e).__name__}: {e}"})
         print(f"  FAIL {what}: {type(e).__name__}: {e}", file=sys.stderr)
         if "-v" in sys.argv:
@@ -488,16 +522,11 @@ def main() -> int:
         manifest["bundles"].append({k: b.get(k) for k in ("id", "title", "section", "unit", "as_of", "period")} | {"items": len(b["items"])})
 
     written = ({f"series/{sid}.json" for sid in built} | {f"bundles/{b['id']}.json" for b in bundle_list}) - rejected_ids
-    stale, too_stale = [], []
-    for f in sorted(DATA_DIR.glob("*/*.json")):
-        rel = f.relative_to(DATA_DIR).as_posix()
-        if rel in written:
-            continue
-        updated = json.loads(f.read_text(encoding="utf-8")).get("updated")
-        age = (datetime.now(timezone.utc) - datetime.fromisoformat(updated)).days if updated else None
-        stale.append({"file": rel, "updated": updated, "age_days": age})
-        if age is None or age > STALE_DAYS:
-            too_stale.append(rel)
+    kept = {f.relative_to(DATA_DIR).as_posix(): json.loads(f.read_text(encoding="utf-8"))
+            for f in sorted(DATA_DIR.glob("*/*.json")) if f.relative_to(DATA_DIR).as_posix() not in written}
+    stale, too_stale, waiting = sort_kept_files(kept, {b["publisher"] for b in manifest["blocked"]}, datetime.now(timezone.utc))
+    for b in manifest["blocked"]:
+        b["files"] = len(waiting)
 
     manifest["warnings"] = warnings
     manifest["stale"] = stale
@@ -507,6 +536,8 @@ def main() -> int:
         print("  WARN", w)
     if stale:
         print(f"  STALE {len(stale)} files kept from earlier runs")
+    if waiting:
+        print(f"  WAITING {len(waiting)} files kept because their publisher refuses this server")
     unreplaced = bool(manifest["errors"]) and not stale
     return 1 if warnings or too_stale or unreplaced else 0
 

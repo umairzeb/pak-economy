@@ -1,7 +1,7 @@
 """Proves the refresh refuses bad data. Run with:  python -m tests.test_guards"""
 from datetime import date, datetime, timezone
 
-from pipeline.build import rejected, rejected_bundle
+from pipeline.build import KNOWN_CLOUD_BLOCKS, refused_cloud, rejected, rejected_bundle, sort_kept_files
 from pipeline.release_days import PAKISTAN, is_due
 from tests.health_check import future_dated
 
@@ -55,9 +55,32 @@ def test_release_days() -> None:
     assert is_due(datetime(2027, 7, 1, 13, 35, tzinfo=timezone.utc), None), "UTC+5 holds in summer"
 
 
+def test_known_cloud_block() -> None:
+    class Refused(Exception):
+        def __init__(self, code):
+            self.response = type("Response", (), {"status_code": code})()
+
+    github = {"GITHUB_ACTIONS": "true"}
+    assert refused_cloud(Refused(403), github), "a refusal on GitHub's servers is recognised"
+    assert not refused_cloud(Refused(403), {}), "a refusal on an ordinary connection is a real failure"
+    assert not refused_cloud(Refused(500), github), "a server fault is a real failure"
+    assert not refused_cloud(ValueError("bad table"), github), "a changed layout is a real failure"
+    assert KNOWN_CLOUD_BLOCKS == {"budget": "Ministry of Finance"}, "only the documented block is excused"
+
+    now = datetime(2026, 11, 8, tzinfo=timezone.utc)
+    old = "2026-01-01T00:00:00+00:00"
+    finance = {"updated": old, "source": {"name": "Ministry of Finance"}}
+    state_bank = {"updated": old, "source": {"name": "State Bank of Pakistan"}}
+    stale, too_stale, waiting = sort_kept_files({"f": finance, "s": state_bank}, {"Ministry of Finance"}, now)
+    assert waiting == ["f"] and too_stale == ["s"] and len(stale) == 1, "the block excuses only that publisher's files"
+    stale, too_stale, waiting = sort_kept_files({"f": finance}, set(), now)
+    assert too_stale == ["f"] and not waiting, "without a block this run, old Finance files are still too old"
+
+
 if __name__ == "__main__":
     test_series()
     test_bundles()
     test_future_dates()
     test_release_days()
+    test_known_cloud_block()
     print("Safeguards work.")
